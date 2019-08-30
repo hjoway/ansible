@@ -1,0 +1,53 @@
+---
+
+# Install zabbix agent 4.2 on Ubuntu 18.04
+
+- hosts: agent
+  become: yes
+  vars:
+    zabbix_deb_url: https://repo.zabbix.com/zabbix/4.2/ubuntu/pool/main/z/zabbix-release/zabbix-release_4.2-2+bionic_all.deb
+    zabbix_server: 192.168.1.69
+
+  tasks:
+    - name : Install aptitude
+      apt: name=aptitude
+
+    - name: Install zabbix deb
+      apt:
+        deb: '{{ zabbix_deb_url }}'
+
+    - name: Install zabbix agent
+      apt:
+        name: zabbix-agent
+        state: latest
+        update_cache: yes
+
+    - name: Setup zabbix server
+      replace:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^Server=127.0.0.1$'
+        replace: 'Server={{ zabbix_server }}'
+
+    - name: Setup zabbix active server
+      replace:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^ServerActive=127.0.0.1$'
+        replace: 'ServerActive={{ zabbix_server }}'
+
+    - name: Allow root
+      replace:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^# AllowRoot=0$'
+        replace: 'AllowRoot=1'
+
+    - name: Setup zabbix hostname
+      replace:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^Hostname=Zabbix server$'
+        replace: 'Hostname={{ ansible_facts["nodename"] }}'
+
+    - name: Enabled and start zabbix agent
+      service:
+        enabled: yes
+        name: zabbix-agent
+        state: restarted
