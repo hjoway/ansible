@@ -1,0 +1,57 @@
+---
+
+# Install Logstash 7.3.1 with local .deb file on Ubuntu 18.04
+# Fuck network speed
+
+- hosts: logstash
+  become: yes
+  vars:
+    elasticsearch_url: 192.168.1.70:9200
+    local_deb: /home/hjoway/logstash-7.3.1.deb
+    remote_deb: /home/hjoway/logstash-7.3.1.deb
+    config_file: /etc/logstash/conf.d/logstash.conf
+
+  tasks:
+    - name: Install latest version of "openjdk-11-jre-headless" ignoring "install-recommends"
+      apt:
+        name: openjdk-11-jre-headless
+        state: latest
+        install_recommends: no
+
+    - name: Copy logstash deb file
+      copy:
+        src: '{{ local_deb }}'
+        dest: '{{ remote_deb }}'
+        mode: '0644'
+
+    - name: Apt install logstash with deb
+      apt:
+        deb: '{{ remote_deb }}'
+
+    # - name: Copy using inline content [JUST TEST]
+    #   copy:
+    #     content: '# This file was moved to /etc/other.conf'
+    #     dest: /etc/logstash/test.conf
+
+    - name: Remove useless deb file
+      file:
+        path: '{{ remote_deb }}'
+        state: absent
+
+    - name: Copy logstash.conf
+      copy:
+        src: /etc/logstash/logstash-sample.conf
+        dest: '{{ config_file }}'
+        remote_src: yes
+
+    - name: Explicitly specifying Elasticsearch url
+      replace:
+        path: '{{ config_file }}'
+        regexp: 'localhost:9200'
+        replace: '{{ elasticsearch_url }}'
+
+    - name: restart logstash
+      service:
+        name: logstash
+        state: restarted
+        enabled: yes
