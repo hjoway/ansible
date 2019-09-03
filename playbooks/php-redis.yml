@@ -1,0 +1,40 @@
+---
+
+# Extend PHP 7 Redis with pecl
+
+- hosts: php
+  become: yes
+  vars:
+    pecl: /usr/local/php/bin/pecl
+    sudo_password: buzhidao
+
+  tasks:
+
+    - name : Ensuer expect is available
+      apt: name=expect
+
+    - name: Get Redis extension files
+      get_url:
+        url: '{{ item.url }}'
+        dest: '/usr/local/src/{{ item.dest }}'
+        # force: yes
+      with_items:
+        - { url: 'https://pecl.php.net/get/igbinary-3.0.1.tgz', dest: igbinary-3.0.1.tgz }
+        - { url: 'https://pecl.php.net/get/redis-5.0.2.tgz', dest: redis-5.0.2.tgz }
+
+    - name: Install Redis extension
+      shell: |
+        set timeout 30
+
+        spawn sudo {{ pecl }} install igbinary-3.0.1.tgz
+        expect "*password*" { send "{{ sudo_password }}\n" }
+
+        spawn sudo {{ pecl }} install redis-5.0.2.tgz
+        expect "*password*" { send "{{ sudo_password }}\n" }
+        expect "enable igbinary serializer support?*:" { send "y\n" }
+        expect "enable lzf compression support?*:" { send "y\n" }
+
+        interact
+      args:
+        executable: /usr/bin/expect
+        chdir: /usr/local/src/

@@ -1,0 +1,185 @@
+---
+
+# Source install PHP 7.3 with on Ubuntu 18.04
+# And Composer
+
+- hosts: php
+  become: yes
+  vars:
+    php_gz_url: https://www.php.net/distributions/php-7.3.8.tar.gz
+    php_gz_dest: /usr/local/src/php-7.3.8.tar.gz
+    php_dir: /usr/local/php
+    source_dir: /usr/local/src/php-7.3.8
+
+  tasks:
+    - name : Install aptitude
+      apt: name=aptitude
+
+    - name: Installed packages
+      apt: name={{ packages }} state=latest
+      vars:
+        packages:
+          - gcc
+          - make
+          - openssl
+          - curl
+          - libbz2-dev
+          - libxslt-dev
+          - libxml2-dev
+          - libjpeg-dev
+          - libpng-dev
+          - libfreetype6-dev
+          - libzip-dev
+          - libssl-dev
+          - libcurl4-gnutls-dev
+          - libgmp-dev
+          - libreadline-dev
+          - autoconf
+
+    - name: Download PHP source code
+      get_url:
+        url: '{{ php_gz_url }}'
+        dest: '{{ php_gz_dest }}'
+        force: no
+
+    - name: Extract php tar.gz
+      unarchive:
+        src: '{{ php_gz_dest }}'
+        # src: '{{ php_gz_url }}' # From remote url, not recommaned
+        dest: '/usr/local/src'
+        remote_src: yes
+
+    - name: Run configure
+      shell:
+        ./configure \
+          --prefix=/usr/local/php \
+          --with-config-file-path=/usr/local/php/etc \
+          --enable-fpm \
+          --with-fpm-user=www \
+          --with-fpm-group=www \
+          --enable-inline-optimization \
+          --disable-debug \
+          --disable-rpath \
+          --enable-shared \
+          --enable-soap \
+          --with-libxml-dir \
+          --with-xmlrpc \
+          --with-openssl \
+          --with-mhash \
+          --with-pcre-regex \
+          --with-sqlite3 \
+          --with-zlib \
+          --enable-bcmath \
+          --with-iconv \
+          --with-bz2 \
+          --enable-calendar \
+          --with-curl \
+          --with-cdb \
+          --enable-dom \
+          --enable-exif \
+          --enable-fileinfo \
+          --enable-filter \
+          --with-pcre-dir \
+          --enable-ftp \
+          --with-gd \
+          --with-openssl-dir \
+          --with-jpeg-dir \
+          --with-png-dir \
+          --with-zlib-dir \
+          --with-freetype-dir \
+          --enable-gd-jis-conv \
+          --with-gettext \
+          --with-gmp \
+          --with-mhash \
+          --enable-json \
+          --enable-mbstring \
+          --enable-mbregex \
+          --enable-mbregex-backtrack \
+          --with-onig \
+          --enable-pdo \
+          --with-mysqli=mysqlnd \
+          --with-pdo-mysql=mysqlnd \
+          --with-zlib-dir \
+          --with-pdo-sqlite \
+          --with-readline \
+          --enable-session \
+          --enable-shmop \
+          --enable-simplexml \
+          --enable-sockets \
+          --enable-sysvmsg \
+          --enable-sysvsem \
+          --enable-sysvshm \
+          --enable-wddx \
+          --with-libxml-dir \
+          --with-xsl \
+          --enable-zip \
+          --enable-mysqlnd-compression-support \
+          --with-pear \
+          --enable-opcache
+      args:
+        chdir: '{{ source_dir }}'
+
+    - name: Make and install
+      shell: make && make install
+      args:
+        chdir: '{{ source_dir }}'
+
+    - name: Link php to /usr/local/bin/php
+      file:
+        src: /usr/local/php/bin/php
+        dest: /usr/local/bin/php
+        state: link
+
+    - name: Link pecl to /usr/local/bin/pecl
+      file:
+        src: /usr/local/php/bin/pecl
+        dest: /usr/local/bin/pecl
+        state: link
+
+    - name: Make php.ini
+      copy:
+        src: '{{ source_dir }}/php.ini-production'
+        dest: /usr/local/php/etc/php.ini
+        remote_src: yes
+
+    - name: Make php-fpm system servcie file
+      copy:
+        src: '{{ source_dir }}/sapi/fpm/php-fpm.service'
+        dest: /etc/systemd/system/php-fpm.service
+        remote_src: yes
+
+    - name: Make php-fpm configure file
+      copy:
+        src: '{{ php_dir }}/etc/{{ item.src }}'
+        dest: '{{ php_dir }}/etc/{{ item.dest }}'
+        remote_src: yes
+      with_items:
+        - { src: php-fpm.conf.default, dest: php-fpm.conf }
+        - { src: php-fpm.d/www.conf.default, dest: php-fpm.d/www.conf }
+
+    - name: Ensure group "www" exists
+      group:
+        name: www
+        state: present
+
+    - name: Add user www with primary group www
+      user:
+        state: present
+        shell: /usr/sbin/nologin
+        name: www
+        groups: www
+        create_home: no
+
+    - name: Enabled and start php-fpm
+      service:
+        enabled: yes
+        name: php-fpm
+        state: restarted
+
+    - name: Get Composer lastest
+      get_url:
+        # url: https://getcomposer.org/composer.phar # Maybe dev
+        url: https://getcomposer.org/download/1.9.0/composer.phar
+        dest: /usr/local/bin/composer
+        force: yes
+        mode: 0655
