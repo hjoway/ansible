@@ -1,0 +1,35 @@
+---
+
+# Install RabbitMQ on Ubuntu 18.04
+
+- hosts: mq
+  become: yes
+
+  tasks:
+    - name: Add RabbitMQ signing key from the URL
+      apt_key:
+        url: https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc
+        state: present
+
+    - name: apt-transport-https
+      apt:
+        name: apt-transport-https
+        state: latest
+
+    - name: apt_repository
+      apt_repository:
+        repo: deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang-21.x
+        state: present
+        filename: bintray.rabbitmq
+
+    - name: apt_repository
+      apt_repository:
+        repo: deb https://dl.bintray.com/rabbitmq/debian bionic main
+        state: present
+        filename: bintray.rabbitmq
+
+    - name: Install
+      apt:
+        name: rabbitmq-server
+        state: latest
+        update_cache: yes
