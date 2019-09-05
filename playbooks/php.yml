@@ -176,6 +176,9 @@
         name: php-fpm
         state: restarted
 
+    - name: Install unzip for composer
+      apt: unzip
+
     - name: Get Composer lastest
       get_url:
         # url: https://getcomposer.org/composer.phar # Maybe dev
