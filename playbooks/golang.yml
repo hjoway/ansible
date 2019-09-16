@@ -1,0 +1,28 @@
+---
+
+# Install Golang on Ubuntu 18.04
+# https://golang.google.cn/
+
+- hosts: golang
+  become: yes
+  vars:
+    archive: https://dl.google.com/go/go1.13.linux-amd64.tar.gz
+    temp: /usr/local/src/go1.13.linux-amd64.tar.gz
+    src: /usr/local/
+
+  tasks:
+    - name: Download Golang archive file
+      get_url:
+        dest: '{{ temp }}'
+        url: '{{ archive}}'
+        force: yes
+
+    - name : Install
+      shell: |
+        sudo tar -C '{{ src }}' -zxf '{{ temp }}'
+
+    - name: Make link
+      file:
+        src: '{{ src }}/go/bin/go'
+        dest: /usr/local/bin/go
+        state: link
