@@ -6,10 +6,10 @@
 - hosts: php
   become: yes
   vars:
-    php_gz_url: https://www.php.net/distributions/php-7.3.8.tar.gz
-    php_gz_dest: /usr/local/src/php-7.3.8.tar.gz
+    php_gz_url: https://www.php.net/distributions/php-7.3.9.tar.gz
+    php_gz_dest: /usr/local/src/php-7.3.9.tar.gz
     php_dir: /usr/local/php
-    source_dir: /usr/local/src/php-7.3.8
+    source_dir: /usr/local/src/php-7.3.9
 
   tasks:
     - name : Install aptitude
@@ -177,7 +177,7 @@
         state: restarted
 
     - name: Install unzip for composer
-      apt: unzip
+      apt: name=unzip
 
     - name: Get Composer lastest
       get_url:
