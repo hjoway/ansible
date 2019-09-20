@@ -1,0 +1,53 @@
+---
+
+# Install Docker CE 19.03 on Ubuntu 18.04
+
+- hosts: docker
+  become: yes
+  vars:
+    key_url: https://download.docker.com/linux/ubuntu/gpg
+
+  tasks:
+    - name: Remove old versions of docker
+      apt: name={{ packages }} state=absent
+      vars:
+        packages:
+          - docker
+          - docker-engine
+          - docker.io
+          - containerd
+          - runc
+
+    - name: Remove docker files
+      file:
+        path: /var/lib/docker/
+        state: absent
+
+    - name: Make source .list file
+      shell: |
+        echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu `lsb_release -cs` stable" \
+        | sudo tee /etc/apt/sources.list.d/docker-ce.list
+      # copy:
+      #   content: 'deb [arch=amd64] https://download.docker.com/linux/ubuntu `lsb_release -cs` stable'
+      #   dest: /etc/apt/sources.list.d/docker-ce.list
+
+    - name: Add docker signing key from the URL
+      apt_key:
+        url: '{{ key_url }}'
+        state: present
+
+    - name: Install docker
+      apt:
+        name: "{{ packages }}"
+        state: latest
+        update_cache: yes
+      vars:
+        packages:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+
+    - name: Add registry mirrors
+      copy:
+        content: '{"registry-mirrors": ["https://registry.docker-cn.com"]}'
+        dest: /etc/docker/daemon.json
